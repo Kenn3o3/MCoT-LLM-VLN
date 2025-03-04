@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VLN Agent UI</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1C2526;
+            color: #D3D7D9;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            grid-template-rows: auto auto auto; /* Add third row */
+            gap: 20px;
+            padding: 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        .simulation-status {
+            grid-column: 1 / 4; /* Span all columns */
+            grid-row: 3; /* Place in third row */
+        }
+        .section {
+            background-color: #2E3B40;
+            border-radius: 8px;
+            padding: 15px;
+            overflow: auto;
+        }
+        .camera-feed {
+            grid-column: 1;
+            grid-row: 1 / 3;
+        }
+        .vlm-prompt {
+            grid-column: 2;
+            grid-row: 1;
+        }
+        .vlm-response {
+            grid-column: 3;
+            grid-row: 1;
+        }
+        .navigation-progress {
+            grid-column: 2;
+            grid-row: 2;
+        }
+        .scene-understanding {
+            grid-column: 3;
+            grid-row: 2;
+        }
+        .camera-feed img {
+            width: 100%;
+            height: auto;
+            border-radius: 4px;
+        }
+        .vlm-prompt, .vlm-response {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .navigation-progress, .scene-understanding {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        h3 {
+            margin-top: 0;
+            color: #FFFFFF;
+        }
+        p {
+            line-height: 1.5;
+            margin-bottom: 10px;
+        }
+        ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        li {
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 8px 12px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .camera-feed img.rgb, .camera-feed img.depth {
+            width: 48%;
+            margin: 1%;
+            display: inline-block;
+        }
+        .vlm-data div {
+            margin: 10px;
+            display: inline-block;
+            vertical-align: top;
+        }
+        .vlm-data img {
+            width: 150px;
+        }
+        @media (max-width: 1200px) {
+            .container {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto;
+            }
+            .camera-feed, .vlm-prompt, .vlm-response, 
+            .navigation-progress, .scene-understanding {
+                grid-column: 1;
+                grid-row: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="section camera-feed">
+            <h3>Camera Feed</h3>
+            <img class="rgb" src="data:image/jpeg;base64,{{ rgb_image }}" alt="RGB Feed">
+            <img class="depth" src="{% if latest_depth_image %}data:image/jpeg;base64,{{ latest_depth_image }}{% else %}#{% endif %}" alt="Depth Feed">
+            <p><strong>Current Action:</strong> {{ current_action }}</p>
+        </div>
+        <div class="section vlm-prompt">
+            <h3>VLM Prompt</h3>
+            <p>{{ vlm_prompt }}</p>
+        </div>
+        <div class="section vlm-response">
+            <h3>VLM Response</h3>
+            <p>{{ vlm_response }}</p>
+        </div>
+        <div class="section navigation-progress">
+            <h3>Navigation Progress</h3>
+            <p><strong>Current Subtask:</strong> {{ current_subtask }}</p>
+            <ul>
+                {% for subtask in subtasks %}
+                    <li>{{ subtask }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        <div class="section scene-understanding">
+            <h3>Scene Understanding</h3>
+            <p><strong>Current Step:</strong> <span id="current-step">{{ step_counter }}</span></p>
+            <p><strong>Remaining Steps:</strong> <span id="remaining-steps">{{ remaining_steps }}</span></p>
+            <p><strong>Goal Distance:</strong> <span id="goal-distance">{{ goal_distance }}</span> meters</p>
+            <p><strong>Status:</strong> <span id="status">{{ status }}</span></p>
+            <ul>
+                {% for desc in scene_descriptions %}
+                    <li>{{ desc }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% if vlm_images and depth_images %}
+    <div class="vlm-data">
+        <h3>VLM Input Sequence</h3>
+        <div>
+            {% for rgb, depth, desc in zip(vlm_images, depth_images, scene_descriptions) %}
+            <div>
+                <h4>Scene</h4>
+                <img src="data:image/jpeg;base64,{{ rgb }}" alt="RGB">
+                <img src="data:image/jpeg;base64,{{ depth }}" alt="Depth">
+                <p>{{ desc }}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        const socket = io();
+        socket.on('update', (data) => {
+            document.querySelector('.camera-feed img.rgb').src = `data:image/jpeg;base64,${data.rgb_image}`;
+            if (data.latest_depth_image) {
+                document.querySelector('.camera-feed img.depth').src = `data:image/jpeg;base64,${data.latest_depth_image}`;
+            }
+            document.querySelector('.camera-feed p').innerText = `Current Action: ${data.current_action}`;
+            document.querySelector('.vlm-prompt p').innerText = data.vlm_prompt;
+            document.querySelector('.vlm-response p').innerText = data.vlm_response;
+            document.querySelector('.navigation-progress p').innerText = `Current Subtask: ${data.current_subtask}`;
+            document.querySelector('.navigation-progress ul').innerHTML = 
+                data.subtasks.map(subtask => `<li>${subtask}</li>`).join('');
+            document.querySelector('.scene-understanding ul').innerHTML = 
+                data.scene_descriptions.map(desc => `<li>${desc}</li>`).join('');
+            document.getElementById('current-step').innerText = data.step_counter;
+            document.getElementById('remaining-steps').innerText = data.remaining_steps;
+            document.getElementById('goal-distance').innerText = data.goal_distance;
+            document.getElementById('status').innerText = data.status;
+        });
+    </script>
+</body>
+</html>
