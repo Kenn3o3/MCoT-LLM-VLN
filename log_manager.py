@@ -95,7 +95,7 @@ class LogManager:
             f.write("**Scene Descriptions:**\n")
             for desc in scene_descriptions:
                 f.write(f"- {desc}\n")
-            f.write("\n**Prompt:**\n```\n{prompt}\n```\n\n")
+            f.write(f"\n**Prompt:**\n```\n{prompt}\n```\n\n")
             f.write(f"**Response:**\n```\n{response}\n```\n\n")
             f.write(f"**Action:** {action}\n\n")
             f.write("**Images:**\n")

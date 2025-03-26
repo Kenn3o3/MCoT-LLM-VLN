@@ -11,7 +11,7 @@ from omni.isaac.lab.app import AppLauncher
 from torchvision.transforms import Compose, Resize, CenterCrop, ToTensor, Normalize
 from log_manager import LogManager
 from image_history_manager import ImageHistoryManager
-from inference_manager import InferenceManager
+from models.inference_manager import InferenceManager
 from models.vln_model import VLNModel
 import torch
 import cv2

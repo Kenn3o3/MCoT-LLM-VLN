@@ -37,7 +37,7 @@ class VLNModel(nn.Module):
     def _generate_scene_description(self, rgb_url: str, depth_url: str, current_subtask: str) -> str:
         """Generate scene description using both RGB and depth images."""
         prompt = (
-            "You are provided with two images: the first is an RGB image from the robot's camera, and the second is a depth map where colors indicate distance (blue for close, red for far). "
+            "You are provided with two images: the first is an RGB image from the robot's camera, and the second is a depth map where colors indicate distance (blue for close, red for far)."
             f"Describe the scene from the robot’s perspective, focusing on navigation-relevant elements related to the current task: {current_subtask}. "
             "Include specific objects (e.g., room, furniture), their positions relative to the robot (front, left, right), and their distances based on the depth map (e.g., 'a chair 1 meter in front'). "
             "Note how their positions have changed from previous scenes, indicating the robot's movement. "
